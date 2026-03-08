@@ -145,7 +145,11 @@ export default function TenantPage() {
         // Cargar info del tenant
         const tenantRes = await fetch(`/api/${tenantSlug}/auth`);
         if (tenantRes.ok) {
-          // Tenant existe
+          const tenantData = await tenantRes.json();
+          if (tenantData.exists && !tenantData.valid) {
+            // Tenant existe pero no hay sesión válida
+            setTenant(tenantData.tenant);
+          }
         }
       } catch (error) {
         console.error('Error cargando tenant:', error);

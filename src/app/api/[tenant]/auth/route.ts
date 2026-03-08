@@ -63,16 +63,20 @@ export async function POST(
     });
 
     // Registrar actividad
-    await db.actividad.create({
-      data: {
-        tenantId: tenant.id,
-        usuarioId: usuario.id,
-        accion: 'login',
-        entidad: 'sesion',
-        detalles: 'Inicio de sesión',
-        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
-      }
-    });
+    try {
+      await db.actividad.create({
+        data: {
+          tenantId: tenant.id,
+          usuarioId: usuario.id,
+          accion: 'login',
+          entidad: 'sesion',
+          detalles: 'Inicio de sesión',
+          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+        }
+      });
+    } catch {
+      // No fallar si no se puede registrar actividad
+    }
 
     return NextResponse.json({
       success: true,
@@ -106,7 +110,7 @@ export async function DELETE(
 ) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    
+
     if (token) {
       await db.sesion.deleteMany({ where: { token } });
     }
@@ -118,19 +122,46 @@ export async function DELETE(
   }
 }
 
-// GET - Verificar sesión
+// GET - Verificar sesión o obtener info del tenant
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ tenant: string }> }
 ) {
   try {
     const { tenant: tenantSlug } = await params;
+
+    // Primero verificar que el tenant existe
+    const tenant = await getTenantBySlug(tenantSlug);
+
+    if (!tenant) {
+      return NextResponse.json({ error: 'Organización no encontrada', exists: false }, { status: 404 });
+    }
+
+    if (!tenant.activo) {
+      return NextResponse.json({ error: 'Organización inactiva', exists: false }, { status: 403 });
+    }
+
+    // Verificar si hay token
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
 
     if (!token) {
-      return NextResponse.json({ valid: false }, { status: 401 });
+      // No hay token, pero el tenant existe - devolver info para login
+      return NextResponse.json({
+        exists: true,
+        valid: false,
+        tenant: {
+          id: tenant.id,
+          slug: tenant.slug,
+          nombre: tenant.nombre,
+          logoUrl: tenant.logoUrl,
+          colorPrimario: tenant.colorPrimario,
+          colorSecundario: tenant.colorSecundario,
+          plan: tenant.plan,
+        }
+      });
     }
 
+    // Verificar sesión
     const sesion = await db.sesion.findUnique({
       where: { token },
       include: {
@@ -143,19 +174,44 @@ export async function GET(
     });
 
     if (!sesion) {
-      return NextResponse.json({ valid: false }, { status: 401 });
+      return NextResponse.json({
+        exists: true,
+        valid: false,
+        tenant: {
+          id: tenant.id,
+          slug: tenant.slug,
+          nombre: tenant.nombre,
+          logoUrl: tenant.logoUrl,
+          colorPrimario: tenant.colorPrimario,
+          colorSecundario: tenant.colorSecundario,
+          plan: tenant.plan,
+        }
+      });
     }
 
     if (sesion.expiresAt < new Date()) {
       await db.sesion.delete({ where: { id: sesion.id } });
-      return NextResponse.json({ valid: false }, { status: 401 });
+      return NextResponse.json({
+        exists: true,
+        valid: false,
+        tenant: {
+          id: tenant.id,
+          slug: tenant.slug,
+          nombre: tenant.nombre,
+          logoUrl: tenant.logoUrl,
+          colorPrimario: tenant.colorPrimario,
+          colorSecundario: tenant.colorSecundario,
+          plan: tenant.plan,
+        }
+      });
     }
 
     if (sesion.usuario.tenant.slug !== tenantSlug) {
-      return NextResponse.json({ valid: false }, { status: 403 });
+      return NextResponse.json({ valid: false, error: 'Sesión no pertenece a esta organización' }, { status: 403 });
     }
 
     return NextResponse.json({
+      exists: true,
       valid: true,
       usuario: {
         id: sesion.usuario.id,
@@ -169,6 +225,6 @@ export async function GET(
 
   } catch (error) {
     console.error('Error verificando sesión:', error);
-    return NextResponse.json({ valid: false }, { status: 500 });
+    return NextResponse.json({ error: 'Error en el servidor' }, { status: 500 });
   }
 }
