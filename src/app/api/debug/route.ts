@@ -1,31 +1,41 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  // Solo verificar variables de entorno primero
+  const hasDb = !!process.env.DATABASE_URL;
+  const hasDirect = !!process.env.DIRECT_URL;
+
+  if (!hasDb) {
+    return NextResponse.json({
+      status: 'error',
+      message: 'DATABASE_URL no está configurada',
+      env: { hasDatabaseUrl: false, hasDirectUrl: hasDirect }
+    }, { status: 500 });
+  }
+
+  // Intentar conectar a la base de datos
   try {
-    // Probar conexión a la base de datos
-    const tenantCount = await db.tenant.count();
-    const userCount = await db.usuario.count();
+    const { db } = await import('@/lib/db');
+    const count = await db.tenant.count();
 
     return NextResponse.json({
       status: 'ok',
       database: 'connected',
-      tenants: tenantCount,
-      users: userCount,
+      tenants: count,
       env: {
-        hasDatabaseUrl: !!process.env.DATABASE_URL,
-        hasDirectUrl: !!process.env.DIRECT_URL,
-        databaseUrlStart: process.env.DATABASE_URL?.substring(0, 30) + '...',
+        hasDatabaseUrl: true,
+        hasDirectUrl: hasDirect,
+        urlStart: process.env.DATABASE_URL?.substring(0, 30) + '...'
       }
     });
   } catch (error) {
     return NextResponse.json({
       status: 'error',
-      message: error instanceof Error ? error.message : String(error),
-      env: {
-        hasDatabaseUrl: !!process.env.DATABASE_URL,
-        hasDirectUrl: !!process.env.DIRECT_URL,
-      }
+      message: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown',
+      env: { hasDatabaseUrl: true, hasDirectUrl: hasDirect }
     }, { status: 500 });
   }
 }
