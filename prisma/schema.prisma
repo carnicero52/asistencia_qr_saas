@@ -135,7 +135,7 @@ model Asistencia {
 }
 
 model Configuracion {
-  id                    String   @id @default("default")
+  id                    String   @id @default(cuid())
   tenantId              String   @unique
   nombreInstitucion     String   @default("Mi Institución")
   toleranciaMinutos     Int      @default(15)
