@@ -8,24 +8,78 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Usuarios del sistema con roles
+// ============================================
+// TENANT (Organización/Escuela/Empresa)
+// ============================================
+model Tenant {
+  id            String   @id @default(cuid())
+  slug          String   @unique // Identificador único para URL
+  nombre        String
+  descripcion   String?
+  logo          String?
+  logoUrl       String?  @db.Text
+  colorPrimario String   @default("#10B981")
+  colorSecundario String @default("#6366F1")
+  
+  // Plan de suscripción
+  plan          String   @default("gratis") // gratis, basico, premium, enterprise
+  activo        Boolean  @default(true)
+  fechaVencimiento DateTime?
+  
+  // Configuración
+  zonaHoraria   String   @default("America/Mexico_City")
+  idioma        String   @default("es")
+  emailContacto String?
+  telefono      String?
+  
+  // Límites del plan
+  maxUsuarios   Int      @default(5)
+  maxPersonas   Int      @default(100)
+  maxGrupos     Int      @default(10)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  usuarios      Usuario[]
+  grupos        Grupo[]
+  personas      Persona[]
+  configuracion Configuracion?
+  actividades   Actividad[]
+
+  @@index([slug])
+  @@index([activo])
+  @@index([plan])
+}
+
+// ============================================
+// USUARIOS DEL SISTEMA
+// ============================================
 model Usuario {
   id        String   @id @default(cuid())
-  username  String   @unique
+  username  String
   password  String
   nombre    String
   email     String?
   rol       String   @default("usuario") // admin, supervisor, usuario
   activo    Boolean  @default(true)
   avatar    String?
+  
+  tenantId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  tenant                Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   asistenciasRegistradas Asistencia[] @relation("RegistradorAsistencia")
-  sesiones               Sesion[]
+  sesiones              Sesion[]
+
+  @@unique([tenantId, username])
+  @@index([tenantId])
+  @@index([activo])
 }
 
-// Sesiones de usuario
+// ============================================
+// SESIONES DE USUARIO
+// ============================================
 model Sesion {
   id        String   @id @default(cuid())
   usuarioId String
@@ -39,25 +93,33 @@ model Sesion {
   @@index([token])
 }
 
-// Grupos (clases, cursos, departamentos, etc.)
+// ============================================
+// GRUPOS (clases, cursos, departamentos)
+// ============================================
 model Grupo {
   id          String   @id @default(cuid())
   nombre      String
   descripcion String?
   color       String   @default("#10B981")
   activo      Boolean  @default(true)
+  
+  tenantId    String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   personas Persona[]
 
+  @@index([tenantId])
   @@index([activo])
 }
 
-// Personas (estudiantes, empleados, participantes)
+// ============================================
+// PERSONAS (estudiantes, empleados)
+// ============================================
 model Persona {
   id        String   @id @default(cuid())
-  codigo    String   @unique
+  codigo    String
   nombre    String
   apellido  String
   email     String?
@@ -65,19 +127,26 @@ model Persona {
   foto      String?
   codigoQr  String   @unique
   activo    Boolean  @default(true)
+  
+  tenantId  String
   grupoId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  tenant      Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   grupo       Grupo?        @relation(fields: [grupoId], references: [id], onDelete: SetNull)
   asistencias Asistencia[]
 
+  @@unique([tenantId, codigo])
+  @@index([tenantId])
   @@index([grupoId])
   @@index([activo])
   @@index([codigo])
 }
 
-// Registro de Asistencias
+// ============================================
+// REGISTRO DE ASISTENCIAS
+// ============================================
 model Asistencia {
   id           String   @id @default(cuid())
   personaId    String
@@ -99,26 +168,30 @@ model Asistencia {
   @@index([tipo])
 }
 
-// Configuración del sistema
+// ============================================
+// CONFIGURACIÓN DEL SISTEMA (por tenant)
+// ============================================
 model Configuracion {
   id                String   @id @default("default")
+  tenantId          String   @unique
+  
   nombreInstitucion String   @default("Mi Institución")
-  logo              String?
-  logoUrl           String?  @db.Text
-  colorPrimario     String   @default("#10B981")
-  colorSecundario   String   @default("#6366F1")
   toleranciaMinutos Int      @default(15)
-  zonaHoraria       String   @default("America/Mexico_City")
-  idioma            String   @default("es")
   emailNotificaciones String?
   activarNotificaciones Boolean @default(false)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
-// Registros de actividad (auditoría)
+// ============================================
+// REGISTRO DE ACTIVIDAD (auditoría)
+// ============================================
 model Actividad {
   id        String   @id @default(cuid())
+  tenantId  String
   usuarioId String?
   accion    String
   entidad   String
@@ -127,7 +200,23 @@ model Actividad {
   ip        String?
   createdAt DateTime @default(now())
 
-  @@index([usuarioId])
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
   @@index([entidad])
   @@index([createdAt])
+}
+
+// ============================================
+// SUPER ADMIN (gestión de todos los tenants)
+// ============================================
+model SuperAdmin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  nombre    String
+  email     String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

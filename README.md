@@ -1,79 +1,67 @@
-# Sistema de Asistencia QR - Versión Full
+# Sistema de Asistencia QR - Multi-Tenant
 
-Sistema completo de control de asistencia mediante código QR con todas las funcionalidades avanzadas.
+Sistema completo multi-tenant de control de asistencia mediante código QR.
+
+## 🏢 Arquitectura Multi-Tenant
+
+Una **sola instalación** puede servir a **múltiples organizaciones**:
+- Cada organización tiene su propia URL: `asisteqr.com/mi-escuela`
+- Datos completamente aislados entre organizaciones
+- Logo y colores personalizados por organización
+- Usuarios y permisos por organización
 
 ## ✨ Características
 
-### 📊 Dashboard
-- Estadísticas en tiempo real
-- Gráfico de asistencias por día
-- Últimos movimientos
-- Resumen de entradas/salidas
+### Para cada Organización
+- 📊 Dashboard con estadísticas
+- 👥 Gestión de grupos y personas
+- 📱 Registro de asistencia QR (cámara o imagen)
+- 🖨️ Tarjetas QR descargables
+- 📈 Reportes con filtros por fecha
+- 📤 Exportar a PDF y Excel
+- ⚙️ Configuración personalizada
 
-### 👥 Gestión de Personas
-- Crear, editar y eliminar personas
-- Asignación a grupos
-- Campos: nombre, apellido, código, email, teléfono
-- Generación automática de código QR
+### Para el Super Admin
+- 🏢 Gestión de todas las organizaciones
+- 📊 Estadísticas globales
+- 🔧 Control de planes y límites
+- 👁️ Auditoría de actividades
 
-### 🏫 Gestión de Grupos
-- Crear, editar y eliminar grupos
-- Colores personalizados
-- Descripciones
+## 🚀 Inicio Rápido
 
-### 📱 Registro de Asistencia
-- Escaneo con cámara
-- Carga de imagen QR
-- Registro automático entrada/salida
-- Feedback visual y sonoro
+### 1. Crear una nueva organización
 
-### 🖨️ Tarjetas QR
-- Generación de tarjetas descargables
-- Logo de institución
-- Diseño personalizado
+Visita `/registro` y completa el formulario:
+- Nombre de la organización
+- Datos del administrador
 
-### 📈 Reportes
-- Filtros por fecha
-- Filtros por grupo
-- Exportar a PDF
-- Exportar a Excel
+### 2. Acceder a tu organización
 
-### 👤 Gestión de Usuarios
-- Roles: admin, supervisor, usuario
-- Crear, editar, eliminar usuarios
-- Permisos por rol
+Ve a `/tu-organizacion` y inicia sesión con las credenciales del administrador.
 
-### ⚙️ Configuración
-- Nombre de institución
-- Logo personalizado
-- Colores primario/secundario
+## 📋 Variables de Entorno
 
-## 🔐 Credenciales por defecto
+```env
+# Base de datos Neon PostgreSQL
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
 
-- **Admin**: `admin` / `admin123`
+# Clave secreta para sesiones
+AUTH_SECRET="tu-clave-secreta"
 
-## 🚀 Despliegue en Vercel
-
-### 1. Variables de entorno
-
-```
-DATABASE_URL=postgresql://usuario:contraseña@ep-xxx.neon.tech/neondb?sslmode=require
-DIRECT_URL=postgresql://usuario:contraseña@ep-xxx.neon.tech/neondb?sslmode=require
-AUTH_SECRET=tu-clave-secreta
+# Clave del super-admin (para API)
+SUPER_ADMIN_KEY="tu-clave-super-admin"
 ```
 
-### 2. Instalación
+## 🔐 Credenciales
 
-```bash
-bun install
-bun run db:push
-```
+### Super Admin (gestión global)
+- Acceder a: `/super-admin`
+- Key: La que configures en `SUPER_ADMIN_KEY`
 
-### 3. Desarrollo
-
-```bash
-bun run dev
-```
+### Admin de organización
+- Se crea al registrar una nueva organización
+- Usuario/contraseña: Los que definas al registrar
 
 ## 🛠️ Tecnologías
 
@@ -82,8 +70,15 @@ bun run dev
 - **Base de datos**: PostgreSQL (Neon)
 - **ORM**: Prisma
 - **QR**: html5-qrcode
-- **Export**: jsPDF, xlsx
 
-## 📝 Licencia
+## 📝 Planes
+
+| Plan | Personas | Grupos | Usuarios | Precio |
+|------|----------|--------|----------|--------|
+| Gratis | 100 | 10 | 5 | $0/mes |
+| Básico | 500 | 20 | 10 | $9/mes |
+| Premium | ∞ | ∞ | ∞ | $29/mes |
+
+## 📄 Licencia
 
 MIT
