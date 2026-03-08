@@ -102,7 +102,13 @@ export default function RegistroPage() {
       if (res.ok && data.success) {
         setSuccess(data);
       } else {
-        setError(data.details || data.error || 'Error al registrar');
+        // Mostrar error específico
+        let errorMsg = data.error || 'Error al registrar';
+        if (data.details) {
+          errorMsg += ` (${data.details.substring(0, 100)})`;
+        }
+        setError(errorMsg);
+        console.error('Error completo:', data);
       }
     } catch {
       setError('Error de conexión');
