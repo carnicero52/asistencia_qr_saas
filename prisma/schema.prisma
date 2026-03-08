@@ -8,134 +8,104 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ============================================
-// TENANT (Organización/Escuela/Empresa)
-// ============================================
 model Tenant {
-  id            String   @id @default(cuid())
-  slug          String   @unique // Identificador único para URL
-  nombre        String
-  descripcion   String?
-  logo          String?
-  logoUrl       String?  @db.Text
-  colorPrimario String   @default("#10B981")
-  colorSecundario String @default("#6366F1")
-  
-  // Plan de suscripción
-  plan          String   @default("gratis") // gratis, basico, premium, enterprise
-  activo        Boolean  @default(true)
+  id               String         @id @default(cuid())
+  slug             String         @unique
+  nombre           String
+  descripcion      String?
+  logo             String?
+  logoUrl          String?
+  colorPrimario    String         @default("#10B981")
+  colorSecundario  String         @default("#6366F1")
+  plan             String         @default("gratis")
+  activo           Boolean        @default(true)
   fechaVencimiento DateTime?
-  
-  // Configuración
-  zonaHoraria   String   @default("America/Mexico_City")
-  idioma        String   @default("es")
-  emailContacto String?
-  telefono      String?
-  
-  // Límites del plan
-  maxUsuarios   Int      @default(5)
-  maxPersonas   Int      @default(100)
-  maxGrupos     Int      @default(10)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  usuarios      Usuario[]
-  grupos        Grupo[]
-  personas      Persona[]
-  configuracion Configuracion?
-  actividades   Actividad[]
+  zonaHoraria      String         @default("America/Mexico_City")
+  idioma           String         @default("es")
+  emailContacto    String?
+  telefono         String?
+  maxUsuarios      Int            @default(5)
+  maxPersonas      Int            @default(100)
+  maxGrupos        Int            @default(10)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  actividades      Actividad[]
+  configuracion    Configuracion?
+  grupos           Grupo[]
+  personas         Persona[]
+  usuarios         Usuario[]
 
   @@index([slug])
   @@index([activo])
   @@index([plan])
 }
 
-// ============================================
-// USUARIOS DEL SISTEMA
-// ============================================
 model Usuario {
-  id        String   @id @default(cuid())
-  username  String
-  password  String
-  nombre    String
-  email     String?
-  rol       String   @default("usuario") // admin, supervisor, usuario
-  activo    Boolean  @default(true)
-  avatar    String?
-  
-  tenantId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant                Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id                     String       @id @default(cuid())
+  username               String
+  password               String
+  nombre                 String
+  email                  String?
+  rol                    String       @default("usuario")
+  activo                 Boolean      @default(true)
+  avatar                 String?
+  tenantId               String
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
   asistenciasRegistradas Asistencia[] @relation("RegistradorAsistencia")
-  sesiones              Sesion[]
+  sesiones               Sesion[]
+  tenant                 Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, username])
   @@index([tenantId])
   @@index([activo])
 }
 
-// ============================================
-// SESIONES DE USUARIO
-// ============================================
 model Sesion {
   id        String   @id @default(cuid())
   usuarioId String
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
-
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@index([usuarioId])
   @@index([token])
 }
 
-// ============================================
-// GRUPOS (clases, cursos, departamentos)
-// ============================================
 model Grupo {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   nombre      String
   descripcion String?
-  color       String   @default("#10B981")
-  activo      Boolean  @default(true)
-  
+  color       String    @default("#10B981")
+  activo      Boolean   @default(true)
   tenantId    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  personas Persona[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  personas    Persona[]
 
   @@index([tenantId])
   @@index([activo])
 }
 
-// ============================================
-// PERSONAS (estudiantes, empleados)
-// ============================================
 model Persona {
-  id        String   @id @default(cuid())
-  codigo    String
-  nombre    String
-  apellido  String
-  email     String?
-  telefono  String?
-  foto      String?
-  codigoQr  String   @unique
-  activo    Boolean  @default(true)
-  
-  tenantId  String
-  grupoId   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant      Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  grupo       Grupo?        @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+  id          String       @id @default(cuid())
+  codigo      String
+  nombre      String
+  apellido    String
+  email       String?
+  telefono    String?
+  foto        String?
+  codigoQr    String       @unique
+  activo      Boolean      @default(true)
+  tenantId    String
+  grupoId     String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   asistencias Asistencia[]
+  grupo       Grupo?       @relation(fields: [grupoId], references: [id])
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, codigo])
   @@index([tenantId])
@@ -144,51 +114,38 @@ model Persona {
   @@index([codigo])
 }
 
-// ============================================
-// REGISTRO DE ASISTENCIAS
-// ============================================
 model Asistencia {
-  id           String   @id @default(cuid())
-  personaId    String
+  id            String   @id @default(cuid())
+  personaId     String
   registradoPor String?
-  tipo         String   @default("entrada") // entrada, salida
-  fecha        DateTime @default(now())
-  hora         String
-  metodo       String   @default("qr") // qr, manual
-  notas        String?
-  latitud      Float?
-  longitud     Float?
-  createdAt    DateTime @default(now())
-
-  persona    Persona   @relation(fields: [personaId], references: [id], onDelete: Cascade)
-  registrador Usuario? @relation("RegistradorAsistencia", fields: [registradoPor], references: [id], onDelete: SetNull)
+  tipo          String   @default("entrada")
+  fecha         DateTime @default(now())
+  hora          String
+  metodo        String   @default("qr")
+  notas         String?
+  latitud       Float?
+  longitud      Float?
+  createdAt     DateTime @default(now())
+  persona       Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  registrador   Usuario? @relation("RegistradorAsistencia", fields: [registradoPor], references: [id])
 
   @@index([personaId])
   @@index([fecha])
   @@index([tipo])
 }
 
-// ============================================
-// CONFIGURACIÓN DEL SISTEMA (por tenant)
-// ============================================
 model Configuracion {
-  id                String   @id @default("default")
-  tenantId          String   @unique
-  
-  nombreInstitucion String   @default("Mi Institución")
-  toleranciaMinutos Int      @default(15)
-  emailNotificaciones String?
-  activarNotificaciones Boolean @default(false)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id                    String   @id @default("default")
+  tenantId              String   @unique
+  nombreInstitucion     String   @default("Mi Institución")
+  toleranciaMinutos     Int      @default(15)
+  emailNotificaciones   String?
+  activarNotificaciones Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
-// ============================================
-// REGISTRO DE ACTIVIDAD (auditoría)
-// ============================================
 model Actividad {
   id        String   @id @default(cuid())
   tenantId  String
@@ -199,17 +156,13 @@ model Actividad {
   detalles  String?
   ip        String?
   createdAt DateTime @default(now())
-
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([entidad])
   @@index([createdAt])
 }
 
-// ============================================
-// SUPER ADMIN (gestión de todos los tenants)
-// ============================================
 model SuperAdmin {
   id        String   @id @default(cuid())
   username  String   @unique
