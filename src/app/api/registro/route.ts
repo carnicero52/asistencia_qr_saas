@@ -93,7 +93,8 @@ export async function POST(request: NextRequest) {
     console.error('Error al registrar organización:', error);
     return NextResponse.json({ 
       error: 'Error al registrar organización',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined
     }, { status: 500 });
   }
 }

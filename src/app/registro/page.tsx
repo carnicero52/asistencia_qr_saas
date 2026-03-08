@@ -102,7 +102,7 @@ export default function RegistroPage() {
       if (res.ok && data.success) {
         setSuccess(data);
       } else {
-        setError(data.error || 'Error al registrar');
+        setError(data.details || data.error || 'Error al registrar');
       }
     } catch {
       setError('Error de conexión');
